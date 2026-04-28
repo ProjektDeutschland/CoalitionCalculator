@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coalition Calculator</title>
+
+<style>
+  :root {
+    --bg: #eeeeee;
+    --text: #111;
+    --muted: #6f7782;
+    --white: #fff;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+
+    /* 🔥 CENTERING FIX */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .calculator {
+    width: 100%;
+    max-width: 680px;
+    padding: 20px 18px 38px;
+  }
+
+  .eyebrow {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 21px;
+    margin: 0 0 28px;
+    font-weight: 700;
+  }
+
+  .party-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+
+  .party-card {
+    width: 124px;
+    height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .bar-area {
+    height: 160px;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .party-bar {
+    width: 100%;
+    transition: height 180ms ease, background 180ms ease, opacity 180ms ease;
+  }
+
+  .party-info {
+    position: relative;
+    background: var(--white);
+    padding: 7px 6px 6px;
+    min-height: 58px;
+  }
+
+  .party-name {
+    font-size: 14px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .party-percent {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 2px;
+  }
+
+  .party-seats {
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .checkbox {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 13px;
+    height: 13px;
+    border: 1px solid #888;
+    background: #fff;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .party-card.active .checkbox::after {
+    content: "✓";
+  }
+
+  .hint {
+    font-size: 14px;
+    margin: 8px 0 18px;
+  }
+
+  .majority-label {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .coalition-bar-wrap {
+    position: relative;
+    height: 48px;
+    background: #fff;
+    margin-bottom: 18px;
+  }
+
+  .coalition-bar {
+    height: 32px;
+    display: flex;
+    width: 100%;
+  }
+
+  .segment {
+    height: 32px;
+  }
+
+  .majority-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(9 / 16 * 100%);
+    border-left: 2px dashed #c8c8c8;
+  }
+
+  .selected-end-line {
+    position: absolute;
+    top: 0;
+    height: 48px;
+    width: 2px;
+    background: #d00000;
+    transition: left 180ms ease;
+  }
+
+  .result {
+    text-align: center;
+  }
+
+  .seat-total {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .coalition-text {
+    font-size: 14px;
+  }
+
+  .footer {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 28px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="calculator">
+  <div class="eyebrow">Election 2025</div>
+  <h1>Seat Distribution / Total Seats: 16</h1>
+
+  <div class="party-row" id="partyRow"></div>
+
+  <div class="hint">
+    Coalition options - Click parties above or below to include/exclude!
+  </div>
+
+  <div class="majority-label">Majority (9 of 16)</div>
+
+  <div class="coalition-bar-wrap">
+    <div class="coalition-bar" id="coalitionBar"></div>
+    <div class="majority-line"></div>
+    <div class="selected-end-line" id="selectedEndLine"></div>
+  </div>
+
+  <div class="result">
+    <div class="seat-total" id="seatTotal">0 Seats</div>
+    <div class="coalition-text" id="coalitionText"></div>
+  </div>
+
+  <div class="footer">Election Authority</div>
+</div>
+
+<script>
+const TOTAL_SEATS = 16;
+const MAJORITY = 9;
+
+const parties = [
+  { id: "fdp", name: "FDP", textName: "FDP", seats: 7, percent: "45.71%", votes: 16, color: "#ffed00", inactive: "#fff7a6", defaultActive: true },
+  { id: "linke", name: "The Left", textName: "THE LEFT", seats: 4, percent: "22.86%", votes: 8, color: "#bf2f7a", inactive: "#d79fbd", defaultActive: true },
+  { id: "bayern", name: "Bavaria Party", textName: "BAVARIA PARTY", seats: 3, percent: "20%", votes: 7, color: "#0086c3", inactive: "#9ecae1", defaultActive: true },
+  { id: "spd", name: "SPD", textName: "SPD", seats: 1, percent: "5.71%", votes: 2, color: "#e31b23", inactive: "#f2a3a6", defaultActive: true },
+  { id: "ind", name: "elviiqs22", textName: "ELVIIQS22", seats: 1, percent: "5.71%", votes: 2, color: "#555555", inactive: "#bbbbbb", defaultActive: true }
+];
+
+const active = new Set(parties.map(p => p.id));
+
+const partyRow = document.getElementById("partyRow");
+const coalitionBar = document.getElementById("coalitionBar");
+const seatTotal = document.getElementById("seatTotal");
+const coalitionText = document.getElementById("coalitionText");
+const selectedEndLine = document.getElementById("selectedEndLine");
+
+function renderPartyCards() {
+  partyRow.innerHTML = "";
+  const maxSeats = Math.max(...parties.map(p => p.seats));
+
+  parties.forEach(party => {
+    const isActive = active.has(party.id);
+
+    const card = document.createElement("div");
+    card.className = "party-card" + (isActive ? " active" : "");
+
+    const bar = document.createElement("div");
+    bar.className = "party-bar";
+    bar.style.height = `${(party.seats / maxSeats) * 155}px`;
+    bar.style.background = isActive ? party.color : party.inactive;
+
+    const barArea = document.createElement("div");
+    barArea.className = "bar-area";
+    barArea.appendChild(bar);
+
+    const info = document.createElement("div");
+    info.className = "party-info";
+    info.innerHTML = `
+      <div class="checkbox"></div>
+      <div class="party-name">${party.name}</div>
+      <div class="party-percent">${party.percent} · ${party.votes} votes</div>
+      <div class="party-seats">${party.seats}</div>
+    `;
+
+    card.appendChild(barArea);
+    card.appendChild(info);
+
+    card.onclick = () => {
+      active.has(party.id) ? active.delete(party.id) : active.add(party.id);
+      render();
+    };
+
+    partyRow.appendChild(card);
+  });
+}
+
+function renderCoalitionBar() {
+  coalitionBar.innerHTML = "";
+  let total = 0;
+
+  parties.filter(p => active.has(p.id)).forEach(p => {
+    const seg = document.createElement("div");
+    seg.className = "segment";
+    seg.style.width = `${(p.seats / TOTAL_SEATS) * 100}%`;
+    seg.style.background = p.color;
+    coalitionBar.appendChild(seg);
+    total += p.seats;
+  });
+
+  selectedEndLine.style.left = `${(total / TOTAL_SEATS) * 100}%`;
+}
+
+function renderResult() {
+  const selected = parties.filter(p => active.has(p.id));
+  const seats = selected.reduce((s, p) => s + p.seats, 0);
+  const names = selected.map(p => p.textName).join(", ");
+  const status = seats >= MAJORITY ? "reached" : "missed";
+
+  seatTotal.textContent = `${seats} Seats`;
+  coalitionText.textContent = selected.length
+    ? `Coalition: ${names}, Majority (${MAJORITY} of ${TOTAL_SEATS}) ${status}`
+    : `No parties selected`;
+}
+
+function render() {
+  renderPartyCards();
+  renderCoalitionBar();
+  renderResult();
+}
+
+render();
+</script>
+
+</body>
+</html>
